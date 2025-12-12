@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createClient } from "@/lib/supabase/client";
-
+import Image from "next/image";
 import {
   Menu,
   Clock,
@@ -25,7 +25,7 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
   /** Sign Out **/
   async function handleSignOut() {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    window.location.href = "/auth/login";
   }
 
   /** Navigation Items **/
@@ -44,10 +44,14 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
 
         {/* Logo */}
         <div className="flex items-center gap-2 px-2 mb-8">
-          <div className="h-10 w-10 rounded-xl bg-emerald-100 flex justify-center items-center">
-            <Clock className="h-5 w-5 text-emerald-600" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">ClockDeck</span>
+          <div className=" flex justify-center items-center">
+           <Image
+              src="/logo.svg"
+              alt="ClockDeck Logo"
+              width={124}
+              height={24}
+            />
+           </div>
         </div>
 
         {/* Navigation */}
@@ -76,12 +80,12 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
         </nav>
 
         {/* Footer */}
-        <div className="mt-auto pt-6 border-t">
+        <div className="mt-auto pt-6 border-t bg-gray-50 p-4 rounded-lg">
           <p className="text-xs text-slate-500">Signed in as</p>
-          <p className="font-medium text-slate-800 mb-3">{userEmail}</p>
+          <p className="font-medium text-slate-800 mb-4">{userEmail}</p>
 
           <Button
-            variant="outline"
+            variant="destructive"
             className="w-full flex gap-2"
             onClick={handleSignOut}
           >
