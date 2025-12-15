@@ -8,9 +8,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, Building2 } from "lucide-react";
+
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+import { Trash2, Building2, Pencil, Plus } from "lucide-react";
+import PropertyGrid from "./PropertyGrid";
 
 /* -------------------------------------------------------------------------- */
 /*                                  ACTIONS                                   */
@@ -26,14 +38,34 @@ export async function addProperty(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/auth/login");
-
-  if (!name) redirect("/dashboard/properties");
+  if (!user || !name) redirect("/dashboard/properties");
 
   await supabase.from("properties").insert({
     name,
     created_by: user.id,
   });
+
+  redirect("/dashboard/properties");
+}
+
+export async function updateProperty(formData: FormData) {
+  "use server";
+
+  const supabase = await createClient();
+  const id = String(formData.get("id") || "");
+  const name = String(formData.get("name") || "").trim();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || !id || !name) redirect("/dashboard/properties");
+
+  await supabase
+    .from("properties")
+    .update({ name })
+    .eq("id", id)
+    .eq("created_by", user.id);
 
   redirect("/dashboard/properties");
 }
@@ -48,11 +80,13 @@ export async function deleteProperty(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user || !id) redirect("/dashboard/properties");
 
-  if (!id) redirect("/dashboard/properties");
-
-  await supabase.from("properties").delete().eq("id", id);
+  await supabase
+    .from("properties")
+    .delete()
+    .eq("id", id)
+    .eq("created_by", user.id);
 
   redirect("/dashboard/properties");
 }
@@ -69,104 +103,97 @@ export default async function PropertiesPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  // Fetch properties
-  const { data: properties, error } = await supabase
+  const { data: properties } = await supabase
     .from("properties")
     .select("*")
+    .eq("created_by", user.id)
     .order("created_at", { ascending: true });
 
+  const list = properties ?? [];
+
   return (
-    <>
-      <h1 className="text-2xl font-semibold mb-6">Manage Properties</h1>
+    <div className="space-y-6">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Properties</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* ---------------------------------------------------------------------- */}
-        {/*                             ADD PROPERTY                              */}
-        {/* ---------------------------------------------------------------------- */}
-        <Card className="border">
-          <CardHeader>
-            <CardTitle>Add New Property</CardTitle>
-          </CardHeader>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Property
+            </Button>
+          </DialogTrigger>
 
-          <CardContent>
-            <form action={addProperty} className="space-y-3">
-              <Input
-                name="name"
-                placeholder="e.g. Hilton Downtown"
-                required
-              />
-
-              <Button type="submit" className="w-full">
-                Add Property
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* ---------------------------------------------------------------------- */}
-        {/*                           LIST OF PROPERTIES                           */}
-        {/* ---------------------------------------------------------------------- */}
-        <Card className="border">
-          <CardHeader>
-            <CardTitle>Your Properties</CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            {(!properties || properties.length === 0) && (
-              <div className="text-slate-500 text-sm">
-                No properties created yet.
-              </div>
-            )}
-
-            {/* property list */}
-            <div className="space-y-3 mt-2">
-              {properties?.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between p-3 border rounded-lg bg-white"
-                >
-                  {/* Name */}
-                  <div className="flex items-center gap-2">
-                    <div className="h-9 w-9 flex items-center justify-center rounded-lg bg-emerald-100">
-                      <Building2 className="h-4 w-4 text-emerald-700" />
-                    </div>
-
-                    <div>
-                      <p className="font-medium">{p.name}</p>
-                      <p className="text-xs text-slate-500">
-                        {new Date(p.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-3">
-                    <Link
-                      href={`/dashboard/properties/${p.id}/employees`}
-                      className="text-sm text-emerald-600 hover:underline"
-                    >
-                      Employees →
-                    </Link>
-
-                    {/* Delete property */}
-                    <form action={deleteProperty}>
-                      <input type="hidden" name="id" value={p.id} />
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </form>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+          <AddPropertyDialog />
+        </Dialog>
       </div>
-    </>
+
+      {/* EMPTY STATE */}
+      {!list.length && (
+        <Card className="max-w-xl mx-auto">
+          <CardContent className="py-16 text-center space-y-4">
+            <Building2 className="h-10 w-10 mx-auto text-muted-foreground" />
+            <h2 className="text-xl font-semibold">No properties yet</h2>
+            <p className="text-muted-foreground">
+              Create your first property to start managing employees.
+            </p>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>Create Property</Button>
+              </DialogTrigger>
+              <AddPropertyDialog />
+            </Dialog>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* PROPERTY GRID (client-rendered for realtime updates) */}
+      {list.length > 0 && <PropertyGrid initial={list} />}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                 DIALOGS                                    */
+/* -------------------------------------------------------------------------- */
+
+function AddPropertyDialog() {
+  return (
+    <DialogContent className="max-w-md">
+      <DialogHeader>
+        <DialogTitle>Add Property</DialogTitle>
+      </DialogHeader>
+
+      <form action={addProperty} className="space-y-4">
+        <Input name="name" placeholder="Property name" required />
+        <DialogFooter>
+          <Button type="submit">Save</Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  );
+}
+
+function EditPropertyDialog({ property }: { property: any }) {
+  return (
+    <DialogContent className="max-w-md">
+      <DialogHeader>
+        <DialogTitle>Edit Property</DialogTitle>
+      </DialogHeader>
+
+      <form action={updateProperty} className="space-y-4">
+        <input type="hidden" name="id" value={property.id} />
+        <Input
+          name="name"
+          defaultValue={property.name}
+          placeholder="Property name"
+          required
+        />
+        <DialogFooter>
+          <Button type="submit">Update</Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
   );
 }

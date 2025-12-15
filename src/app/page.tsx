@@ -1,207 +1,274 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 import {
-  Clock,
-  Building2,
-  Users,
-  CalendarClock,
-  FileText,
   ArrowRight,
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  FileSpreadsheet,
+  LineChart,
+  Lock,
+  ShieldCheck,
+  Users,
 } from "lucide-react";
+
+/* =======================
+   SEO METADATA
+======================= */
+export const metadata = {
+  title: "ClockDeck – Payroll-Ready Time Tracking",
+  description:
+    "ClockDeck helps teams track time, calculate overtime automatically, approve payroll, and export finance-ready files — without spreadsheets.",
+};
+
+/* =======================
+   DATA
+======================= */
+
+const features = [
+  {
+    icon: Clock,
+    title: "Accurate time tracking",
+    desc: "Employees clock in and out with property and shift context.",
+  },
+  {
+    icon: Users,
+    title: "Multi-property support",
+    desc: "Manage multiple locations without duplicating employees.",
+  },
+  {
+    icon: Lock,
+    title: "Locked pay periods",
+    desc: "Prevent edits after approval to avoid payroll disputes.",
+  },
+  {
+    icon: LineChart,
+    title: "Live insights",
+    desc: "Track overtime risk and active shifts in real time.",
+  },
+  {
+    icon: FileSpreadsheet,
+    title: "Payroll-ready exports",
+    desc: "Clean CSV exports built for finance systems.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Audit & compliance",
+    desc: "Role-based access with full approval history.",
+  },
+];
+
+const steps = [
+  {
+    icon: Clock,
+    title: "Review timesheets",
+    desc: "Scan employee hours in one consolidated weekly view.",
+  },
+  {
+    icon: CalendarClock,
+    title: "Approve hours",
+    desc: "One-click approvals for regular and overtime hours.",
+  },
+  {
+    icon: FileSpreadsheet,
+    title: "Lock & export",
+    desc: "Lock payroll and export finance-ready files instantly.",
+  },
+];
+
+/* =======================
+   PAGE
+======================= */
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen bg-slate-50 text-slate-900 overflow-hidden">
+    <main className="bg-white text-slate-900">
+      {/* ================= Header ================= */}
+      <header className="sticky top-0 z-30 border-b bg-white">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/logo.svg" alt="ClockDeck" width={120} height={24} />
+          </Link>
 
-      {/* ================= BACKGROUND DECOR ================= */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-gradient-to-br from-indigo-200/50 to-transparent blur-3xl" />
-        <div className="absolute top-[520px] right-[-160px] h-[420px] w-[420px] rounded-full bg-gradient-to-br from-violet-200/40 to-transparent blur-3xl" />
-      </div>
-
-      {/* ================= NAVBAR ================= */}
-      <header className="relative z-20 bg-slate-50/80 backdrop-blur border-b border-slate-200">
-        <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="ClockDeck Logo" width={132} height={32} />
-          </div>
-
-          <div className="flex items-center gap-4 text-sm">
-            <Link href="/auth/login" className="text-slate-600 hover:text-slate-900">
-              Sign in
+          <nav className="hidden items-center gap-6 text-sm md:flex">
+            <a href="#features" className="text-slate-600 hover:text-slate-900">
+              Features
+            </a>
+            <a href="#workflow" className="text-slate-600 hover:text-slate-900">
+              How it works
+            </a>
+            <Link href="/dashboard" className="text-slate-600 hover:text-slate-900">
+              Dashboard
             </Link>
-            <Button
-              asChild
-              className="h-9 px-4 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white"
-            >
-              <Link href="/auth/login">Get started</Link>
+            <Link href="/auth/login" className="text-slate-600 hover:text-slate-900">
+              Login
+            </Link>
+            <Button asChild>
+              <Link href="/auth/login">Start free</Link>
             </Button>
-          </div>
+          </nav>
+
+          <Button asChild className="md:hidden">
+            <Link href="/auth/login">Start</Link>
+          </Button>
         </div>
       </header>
 
-      {/* ================= HERO ================= */}
-      <section className="relative z-10 pt-24 pb-32">
-        <div className="mx-auto max-w-6xl px-6 grid gap-14 lg:grid-cols-2 items-center">
-
-          {/* TEXT */}
-          <div className="text-center lg:text-left">
-            <h1 className="text-[42px] sm:text-[52px] leading-[1.05] font-semibold tracking-tight">
-              Time tracking for
-              <span className="block text-indigo-600">
-                modern property teams
-              </span>
-            </h1>
-
-            <p className="mt-6 text-lg text-slate-600 max-w-xl mx-auto lg:mx-0">
-              Track employee hours, manage properties, and export timesheets —
-              all from a clean, friendly interface your team actually enjoys using.
+      {/* ================= Hero ================= */}
+      <section className="px-6 py-24">
+        <div className="mx-auto grid max-w-7xl gap-16 md:grid-cols-2 items-center">
+          {/* Left */}
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+              Payroll-ready time tracking
             </p>
 
-            <div className="mt-10 flex flex-col sm:flex-row items-center lg:items-start gap-4">
-              <Button
-                asChild
-                className="h-11 px-6 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white"
-              >
+            <h1 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
+              Payroll completed in{" "}
+              <span className="text-indigo-600">minutes</span>, not hours
+            </h1>
+
+            <p className="mt-6 text-lg text-slate-600 max-w-xl">
+              ClockDeck automatically calculates regular and overtime hours,
+              simplifies approvals, and exports payroll-ready files — without
+              spreadsheets.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Button asChild size="lg">
                 <Link href="/auth/login">
                   Open dashboard <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-
-              <Link
-                href="#how"
-                className="text-sm text-slate-600 hover:text-slate-900"
+              <a
+                href="#workflow"
+                className="self-center text-sm font-semibold text-slate-600 hover:text-slate-900"
               >
-                See how it works →
-              </Link>
+                Watch how it works →
+              </a>
             </div>
+
+            <p className="mt-6 text-xs text-slate-500">
+              Trusted by growing teams • No credit card required
+            </p>
           </div>
 
-          {/* ILLUSTRATION */}
-          <div className="flex justify-center lg:justify-end">
-            <Image
-              src="clock.svg"
-              alt="ClockDeck dashboard illustration"
-              width={520}
-              height={420}
-              className="w-full max-w-md"
-            />
+          {/* Right */}
+          <div className="relative">
+            <div className="rounded-xl border bg-slate-50 p-4 shadow-sm">
+              <Image
+                src="/payroll.jpg"
+                alt="Payroll dashboard preview"
+                width={720}
+                height={480}
+                className="rounded-lg"
+              />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ================= HOW IT WORKS ================= */}
-      <section id="how" className="relative z-10 py-28">
-        <div className="mx-auto max-w-6xl px-6 grid gap-16 md:grid-cols-2">
-
-          {/* LEFT */}
-          <div>
-            <p className="text-sm uppercase tracking-wide text-indigo-600 mb-4">
-              How it works
-            </p>
-            <h2 className="text-3xl font-semibold tracking-tight">
-              Simple, structured, reliable
+      {/* ================= Features ================= */}
+      <section id="features" className="bg-slate-50 px-6 py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-16 text-center">
+            <h2 className="text-3xl font-semibold">
+              Efficiency and accuracy at the core
             </h2>
-            <p className="mt-4 text-slate-600 max-w-md">
-              Designed to mirror real-world workflows — not spreadsheets.
+            <p className="mt-4 text-slate-600">
+              Everything you need to go from clock-in to payroll export.
             </p>
-            <div className="flex top-4 p-6">
-            <Image
-              src="clockinout.svg"
-              alt="ClockDeck dashboard illustration"
-              width={320}
-              height={320}
-              className="w-full max-w-md"
-            />
-            </div>
           </div>
 
-          {/* RIGHT */}
-          <div className="space-y-8">
-            <Feature icon={Building2} title="Properties first" desc="Each property has its own employees and shifts." />
-            <Feature icon={Users} title="Employee management" desc="Add staff once, assign anywhere instantly." />
-            <Feature icon={Clock} title="Accurate clocking" desc="Clock in and out using system time." />
-            <Feature icon={CalendarClock} title="Clear timesheets" desc="View entries by date, property, or person." />
-            <Feature icon={FileText} title="Clean exports" desc="Printable, payroll-ready reports." />
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f) => (
+              <div
+                key={f.title}
+                className="rounded-xl border bg-white p-6 transition hover:shadow-md"
+              >
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                  <f.icon className="h-5 w-5" />
+                </div>
+                <h3 className="font-semibold">{f.title}</h3>
+                <p className="mt-2 text-sm text-slate-600">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ================= Workflow ================= */}
+      <section id="workflow" className="px-6 py-24">
+        <div className="mx-auto max-w-5xl text-center">
+          <h2 className="text-3xl font-semibold">How it works</h2>
+          <p className="mt-4 text-slate-600">
+            A simple workflow designed for busy teams.
+          </p>
+
+          <div className="mt-16 grid gap-10 md:grid-cols-3">
+            {steps.map((step, i) => (
+              <div key={step.title}>
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-white">
+                  {i + 1}
+                </div>
+                <h3 className="mt-4 font-semibold">{step.title}</h3>
+                <p className="mt-2 text-sm text-slate-600">{step.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ================= CTA ================= */}
-      <section className="relative z-10 py-28 bg-white border-t border-slate-200">
-        <div className="mx-auto max-w-4xl px-6 text-center">
-          <h3 className="text-3xl font-semibold">
-            Ready to make time tracking painless?
-          </h3>
-          <p className="mt-4 text-slate-600">
-            Set up in minutes. No training required.
+      <section className="px-6 py-24 bg-indigo-600 text-white">
+        <div className="mx-auto max-w-4xl text-center">
+          <h2 className="text-3xl font-semibold">
+            Ready to simplify payroll?
+          </h2>
+          <p className="mt-4 text-indigo-100">
+            Join teams saving hours every week with automated payroll prep.
           </p>
 
-          <Button
-            asChild
-            className="mt-8 h-11 px-8 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white"
-          >
-            <Link href="/auth/login">Get started</Link>
-          </Button>
+          <div className="mt-8 flex justify-center gap-4">
+            <Button asChild size="lg" variant="secondary">
+              <Link href="/auth/login">
+                Start free trial <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* ================= FOOTER ================= */}
-      <footer className="relative z-10 bg-slate-50 border-t border-slate-200 py-12">
-        <div className="mx-auto max-w-7xl px-6 grid gap-8 md:grid-cols-3 text-sm">
-
+      {/* ================= Footer ================= */}
+      <footer className="border-t px-6 py-12 text-sm text-slate-600">
+        <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-3">
           <div>
-            <p className="font-medium">ClockDeck</p>
-            <p className="mt-2 text-slate-600">
-              Friendly, accurate time tracking for property teams.
+            <Image src="/logo.svg" alt="ClockDeck" width={120} height={24} />
+            <p className="mt-2">
+              Payroll-ready time tracking for modern teams.
             </p>
           </div>
 
-          <div className="space-y-2 text-slate-600">
-            <p className="font-medium text-slate-900">Product</p>
-            <p>Clock in / out</p>
+          <div>
+            <p className="font-semibold text-slate-900">Product</p>
+            <p>Time tracking</p>
             <p>Timesheets</p>
-            <p>Reports</p>
+            <p>Payroll exports</p>
           </div>
 
-          <div className="space-y-2 text-slate-600">
-            <p className="font-medium text-slate-900">Company</p>
+          <div>
+            <p className="font-semibold text-slate-900">Company</p>
             <p>Privacy</p>
             <p>Security</p>
             <p>Support</p>
           </div>
-
         </div>
 
-        <div className="mt-10 text-center text-xs text-slate-500">
+        <div className="mt-10 text-center text-xs">
           © {new Date().getFullYear()} ClockDeck. All rights reserved.
         </div>
       </footer>
-    </div>
-  );
-}
-
-/* ================= FEATURE ROW ================= */
-
-function Feature({
-  icon: Icon,
-  title,
-  desc,
-}: {
-  icon: any;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <div className="flex gap-4 items-start">
-      <div className="h-11 w-11 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center">
-        <Icon className="h-5 w-5 text-indigo-600" />
-      </div>
-      <div>
-        <p className="font-medium">{title}</p>
-        <p className="mt-1 text-sm text-slate-600">{desc}</p>
-      </div>
-    </div>
+    </main>
   );
 }

@@ -30,18 +30,18 @@ export default function LoginPage() {
       </div>
 
       {/* Auth Card */}
-      <Card className="w-full max-w-md bg-white border border-slate-200 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-center text-slate-900 text-xl">
-            Admin login
-          </CardTitle>
-          <p className="text-center text-sm text-slate-500 mt-1">
-            Sign in to manage properties and timesheets
-          </p>
-        </CardHeader>
+      <Card className="w-full max-w-2xl bg-white border border-slate-200 shadow-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          <div className="hidden md:flex items-center justify-center bg-indigo-50 p-8 rounded-l-lg">
+            <div className="space-y-4 text-center">
+              <Clock className="mx-auto h-12 w-12 text-indigo-600" />
+              <h3 className="text-lg font-semibold">Welcome back</h3>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">Sign in to manage properties, employees, and payroll</p>
+            </div>
+          </div>
 
-        <CardContent>
-          <form className="space-y-4">
+          <CardContent className="p-8">
+            <form className="space-y-4">
 
             {/* Email */}
             <div className="space-y-1">
@@ -76,9 +76,9 @@ export default function LoginPage() {
             {/* Login */}
             <Button
               formAction={login}
-              className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-medium"
+              className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-sm"
             >
-              Log in
+              Sign in
             </Button>
 
             {/* Divider */}
@@ -92,18 +92,16 @@ export default function LoginPage() {
             </div>
 
             {/* Signup prompt */}
-            <span className="text-center text-sm text-slate-500 block">
-              Don't have an account?
-            </span> 
-
-            {/* Signup */}
-            <Button
-              formAction={signup}
-              variant="outline"
-              className="w-full h-11 border-slate-300 text-slate-700 hover:bg-slate-100"
-            >
-              Create account
-            </Button>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">Don't have an account?</p>
+              <Button
+                formAction={signup}
+                variant="outline"
+                className="mt-3 w-full h-11 border-slate-300 text-slate-700 hover:bg-slate-100"
+              >
+                Create account
+              </Button>
+            </div>
           </form>
 
           {/* Forgot password */}
@@ -116,6 +114,7 @@ export default function LoginPage() {
             </Link>
           </div>
         </CardContent>
+        </div>
       </Card>
 
       {/* Footer */}

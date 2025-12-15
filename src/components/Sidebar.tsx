@@ -1,13 +1,17 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
+
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { createClient } from "@/lib/supabase/client";
-import Image from "next/image";
+
 import {
   Menu,
   Clock,
@@ -16,49 +20,86 @@ import {
   Timer,
   CalendarClock,
   LogOut,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+
+/* -------------------------------------------------------------------------- */
+/* CONFIG                                                                     */
+/* -------------------------------------------------------------------------- */
+
+const nav = [
+  { label: "Overview", href: "/dashboard", icon: Clock, exact: true },
+  { label: "Clock", href: "/dashboard/clock", icon: Timer },
+  { label: "Properties", href: "/dashboard/properties", icon: Building2 },
+  { label: "Employees", href: "/dashboard/employees", icon: Users },
+  { label: "Timesheet", href: "/dashboard/timesheet", icon: CalendarClock },
+];
+
+/* -------------------------------------------------------------------------- */
+/* SIDEBAR                                                                    */
+/* -------------------------------------------------------------------------- */
 
 export default function Sidebar({ userEmail }: { userEmail: string }) {
   const pathname = usePathname();
   const supabase = createClient();
 
-  /** Sign Out **/
+  const [collapsed, setCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   async function handleSignOut() {
     await supabase.auth.signOut();
     window.location.href = "/auth/login";
   }
 
-  /** Navigation Items **/
-  const nav = [
-    { label: "Overview", href: "/dashboard", icon: Clock },
-    { label: "Clock", href: "/dashboard/clock", icon: Timer },
-    { label: "Properties", href: "/dashboard/properties", icon: Building2 },
-    { label: "Employees", href: "/dashboard/employees", icon: Users },
-    { label: "Timesheet", href: "/dashboard/timesheet", icon: CalendarClock },
-  ];
+  if (!mounted) return null; // ✅ prevents hydration mismatch
 
   return (
     <>
-      {/* -------------------- DESKTOP SIDEBAR -------------------- */}
-      <aside className="hidden md:flex w-64 border-r bg-white flex-col h-screen py-6 px-4 shadow-sm">
+      {/* ===================== DESKTOP ===================== */}
+      <aside
+        className={cn(
+          "hidden md:flex h-screen flex-col bg-white transition-all duration-300 shadow-sm",
+          collapsed ? "w-20" : "w-64"
+        )}
+        aria-label="Main navigation"
+      >
+        {/* Logo + Toggle */}
+        <div className="flex items-center justify-between px-4 py-5 border-b">
+          <Image
+            src="/logo.svg"
+            alt="ClockDeck"
+            width={collapsed ? 36 : 120}
+            height={24}
+            priority
+          />
 
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-2 mb-8">
-          <div className=" flex justify-center items-center">
-           <Image
-              src="/logo.svg"
-              alt="ClockDeck Logo"
-              width={124}
-              height={24}
-            />
-           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={() => setCollapsed(!collapsed)}
+            className="hover:bg-slate-100"
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex flex-col gap-1">
+        <nav className="flex-1 px-2 py-4 space-y-1">
           {nav.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+            const active = item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
+
             const Icon = item.icon;
 
             return (
@@ -66,37 +107,45 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all",
                   active
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    ? "bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-inner"
+                    : "text-slate-600 hover:bg-slate-50"
                 )}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <div className="h-8 w-8 flex items-center justify-center rounded-md bg-white border shadow-xs">
+                  <Icon className="h-4 w-4" />
+                </div>
+                {!collapsed && <span className="font-medium">{item.label}</span>}
               </Link>
             );
           })}
         </nav>
 
         {/* Footer */}
-        <div className="mt-auto pt-6 border-t bg-gray-50 p-4 rounded-lg">
-          <p className="text-xs text-slate-500">Signed in as</p>
-          <p className="font-medium text-slate-800 mb-4">{userEmail}</p>
+        <div className="border-t p-4">
+          {!collapsed && (
+            <div className="mb-2">
+              <p className="text-xs text-slate-500">Signed in as</p>
+              <p className="text-sm font-medium text-slate-800 truncate">
+                {userEmail}
+              </p>
+            </div>
+          )}
 
           <Button
-            variant="destructive"
-            className="w-full flex gap-2"
             onClick={handleSignOut}
+            variant="outline"
+            className="mt-3 w-full flex items-center gap-2"
           >
             <LogOut className="h-4 w-4" />
-            Sign Out
+            {!collapsed && "Sign out"}
           </Button>
         </div>
       </aside>
 
-      {/* -------------------- MOBILE NAVBAR -------------------- */}
-      <div className="md:hidden p-3 border-b bg-white flex items-center justify-between shadow-sm">
+      {/* ===================== MOBILE ===================== */}
+      <div className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-white">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -104,19 +153,24 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
             </Button>
           </SheetTrigger>
 
-          <SheetContent side="left" className="p-0 w-72 bg-white">
-            {/* Mobile Header */}
-            <div className="p-4 border-b text-lg font-semibold flex items-center gap-2">
-              <Clock className="h-5 w-5 text-emerald-600" />
-              ClockDeck
+          <SheetContent side="left" className="w-72 p-0">
+            <div className="flex items-center gap-2 px-4 py-4 border-b">
+              <Image
+                src="/logo.svg"
+                alt="ClockDeck"
+                width={120}
+                height={24}
+                priority
+              />
             </div>
 
-            <ScrollArea className="h-[78vh] p-3">
-              <nav className="flex flex-col gap-1">
+            <ScrollArea className="h-[75vh] px-3 py-4">
+              <nav className="space-y-1">
                 {nav.map((item) => {
-                  const active =
-                    pathname === item.href ||
-                    pathname.startsWith(item.href + "/");
+                  const active = item.exact
+                    ? pathname === item.href
+                    : pathname.startsWith(item.href);
+
                   const Icon = item.icon;
 
                   return (
@@ -124,9 +178,9 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition",
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm",
                         active
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
                           : "text-slate-600 hover:bg-slate-100"
                       )}
                     >
@@ -138,18 +192,19 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
               </nav>
             </ScrollArea>
 
-            {/* Mobile Footer */}
-            <div className="border-t p-4">
-              <p className="text-xs text-slate-500 mb-1">Signed in as:</p>
-              <p className="font-medium text-slate-800">{userEmail}</p>
+            <div className="border-t px-4 py-4">
+              <p className="text-xs text-slate-500">Signed in as</p>
+              <p className="text-sm font-medium text-slate-800 truncate">
+                {userEmail}
+              </p>
 
               <Button
-                variant="outline"
-                className="w-full mt-4 flex gap-2"
                 onClick={handleSignOut}
+                variant="outline"
+                className="mt-4 w-full flex items-center gap-2"
               >
                 <LogOut className="h-4 w-4" />
-                Sign Out
+                Sign out
               </Button>
             </div>
           </SheetContent>

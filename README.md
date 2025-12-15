@@ -1,36 +1,230 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+🧾 What This Website Is About
 
-## Getting Started
+This website is a Payroll & Timesheet Management System designed for small to mid-size businesses (restaurants, retail, property management, service companies, etc.) to:
 
-First, run the development server:
+Track employee clock-in / clock-out
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Calculate work hours accurately
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Handle overtime automatically
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Review, approve, and lock payroll
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Generate weekly payroll summaries in real time
 
-## Learn More
+It replaces spreadsheets, manual calculations, and error-prone payroll prep with a clean, automated, role-based web app.
 
-To learn more about Next.js, take a look at the following resources:
+🎯 Core Problem It Solves
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Businesses struggle with:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Incorrect time calculations
 
-## Deploy on Vercel
+Overtime mistakes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Manual payroll aggregation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Lack of visibility into who is working now
+
+Approval chaos before payroll submission
+
+This website fixes all of that.
+
+🚀 Key Features (What the App Can Do)
+1️⃣ Time Tracking (Clock In / Clock Out)
+
+Employees clock in and out per property/location
+
+Supports multiple shifts per day
+
+Handles missing clock-outs safely
+
+2️⃣ Accurate Hours Calculation (Core Strength)
+
+Daily overtime logic
+
+Up to 8 hours/day → Regular
+
+Anything above → Overtime
+
+Handles:
+
+Multiple punches per day
+
+Partial shifts
+
+Overnight safety
+
+Calculates:
+
+Regular hours
+
+Overtime hours
+
+Total (gross) hours
+
+⚙️ All calculations are done server-safe & UI-safe, not fragile spreadsheet math.
+
+3️⃣ Weekly Payroll Dashboard (Default View)
+
+Automatically loads current week (Mon–Sun)
+
+Shows:
+
+Employee name
+
+Property name
+
+Hourly rate
+
+Regular hours
+
+Overtime hours
+
+Total hours
+
+Gross pay (OT × 1.5)
+
+Approval status
+
+4️⃣ Per-Day Hours Breakdown
+
+Expand an employee row to see:
+
+Daily regular hours
+
+Daily overtime hours
+
+Daily gross hours
+
+Makes audits and payroll review transparent
+
+5️⃣ Payroll Approval Workflow
+
+Each time entry has a status:
+
+pending
+
+approved
+
+Payroll shows:
+
+Who is still pending
+
+How many employees are unapproved
+
+Supports:
+
+Inline approval
+
+Bulk approvals
+
+Locked payroll periods
+
+6️⃣ Payroll Locking (Audit Safety)
+
+Once payroll is finalized:
+
+Payroll period can be locked
+
+Editing & approvals are disabled
+
+Admin override available (if enabled)
+
+This prevents:
+
+Accidental changes
+
+Post-submission payroll errors
+
+7️⃣ Multi-Property Support
+
+One business owner can manage:
+
+Multiple properties/locations
+
+Shared employees across properties
+
+Payroll automatically groups and filters by:
+
+Property ownership
+
+Logged-in user
+
+8️⃣ Secure, User-Scoped Data
+
+Uses Supabase authentication + RLS
+
+Each user sees:
+
+Only their employees
+
+Only their properties
+
+Only their payroll data
+
+No cross-account data leaks
+
+9️⃣ Search & Filtering
+
+Search payroll by:
+
+Employee name
+
+Property name
+
+Instantly updates KPIs and totals
+
+🔟 Real-Time Friendly Architecture
+
+Designed to support:
+
+Live clock-ins
+
+Realtime payroll updates
+
+Future websocket / Supabase Realtime extensions
+
+📊 KPIs & Insights
+
+The dashboard provides:
+
+💰 Total payroll cost (current week)
+
+⏱ Total hours worked
+
+⚠ Pending approvals
+
+👥 Active employees
+
+🧠 Who This App Is For
+
+Restaurant owners
+
+Property managers
+
+Retail chains
+
+Staffing agencies
+
+Small HR / payroll teams
+
+Startups that want in-house payroll prep without enterprise software
+
+🧩 Tech Stack (Implicit From Build)
+
+Next.js (App Router)
+
+TypeScript
+
+Supabase (Auth, DB, RLS)
+
+ShadCN UI
+
+Tailwind CSS
+
+Postgres
+
+🏁 In One Sentence (Pitch)
+
+A modern payroll & timesheet web app that automatically calculates regular and overtime hours, provides transparent per-day breakdowns, and lets business owners confidently review, approve, and lock weekly payroll — without spreadsheets or errors

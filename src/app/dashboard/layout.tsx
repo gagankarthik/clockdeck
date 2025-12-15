@@ -14,14 +14,19 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) redirect("/auth/login");
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    // 🔒 App shell: fixed viewport, no page scroll
+    <div className="h-screen flex bg-slate-50 overflow-hidden">
+      {/* Sidebar (fixed, no scroll) */}
       <Sidebar userEmail={user.email!} />
 
-      <main className="flex-1 p-4 md:p-8">
-        <div className="max-w-6xl mx-auto">{children}</div>
+      {/* Main content (ONLY this scrolls) */}
+      <main className="flex-1 h-full overflow-y-auto">
+        <div className="p-4 md:p-8">
+          <div className="max-w-6xl mx-auto">{children}</div>
+        </div>
       </main>
     </div>
   );

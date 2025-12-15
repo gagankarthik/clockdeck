@@ -1,150 +1,227 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
-
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-
-import { Clock, Timer, Building2 } from "lucide-react";
+  Clock,
+  Timer,
+  Building2,
+  User,
+  AlertTriangle,
+} from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
-/*                                TYPES                                        */
+/* TYPES */
 /* -------------------------------------------------------------------------- */
+
+type Property = {
+  id: string;
+  name: string;
+};
 
 type Employee = {
   id: string;
   name: string;
   pin: number;
   property_id: string;
-  properties?: { name: string } | null;
+  is_active: boolean;
 };
 
 type ActiveEntry = {
   id: string;
-  employee_id: string;
-  property_id: string;
   clock_in: string;
 };
 
 /* -------------------------------------------------------------------------- */
-/*                               MAIN PAGE                                     */
+/* PAGE */
 /* -------------------------------------------------------------------------- */
 
 export default function ClockPage() {
   const supabase = createClient();
 
-  const [pin, setPin] = useState("");
+  const [property, setProperty] = useState<Property | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [activeEntry, setActiveEntry] = useState<ActiveEntry | null>(null);
-  const [now, setNow] = useState(Date.now());
-  const [error, setError] = useState("");
 
-  /* 🚀 AUTO-LOGOUT TIMER STATE */
-  const [autoLogoutTimer, setAutoLogoutTimer] = useState<number | null>(null);
+  const [pin, setPin] = useState("");
+  const [now, setNow] = useState(new Date());
+  const [elapsed, setElapsed] = useState("00:00");
 
-  /* LIVE TIMER */
+  const [error, setError] = useState<string | null>(null);
+  const [shake, setShake] = useState(false);
+
+  const logoutTimer = useRef<NodeJS.Timeout | null>(null);
+
+  /* -------------------------------------------------------------------------- */
+  /* LIVE CLOCK */
+  /* -------------------------------------------------------------------------- */
+
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
   /* -------------------------------------------------------------------------- */
-  /*                        🚀 AUTO LOGOUT LOGIC (10 sec)                        */
+  /* LOAD PROPERTY */
   /* -------------------------------------------------------------------------- */
 
   useEffect(() => {
-    if (!employee) return;
+    async function loadProperty() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
 
-    // Start 10-sec auto logout
-    const timer = setTimeout(() => {
-      resetToPinScreen();
-    }, 10000);
+      const { data } = await supabase
+        .from("properties")
+        .select("id, name")
+        .eq("created_by", user.id)
+        .maybeSingle();
 
-    setAutoLogoutTimer(timer as unknown as number);
+      if (data) setProperty(data);
+    }
 
-    return () => clearTimeout(timer);
-  }, [employee]);
+    loadProperty();
+  }, []);
 
-  function resetToPinScreen() {
+  /* -------------------------------------------------------------------------- */
+  /* ELAPSED TIMER */
+  /* -------------------------------------------------------------------------- */
+
+  useEffect(() => {
+    if (!activeEntry) return;
+
+    const interval = setInterval(() => {
+      const diff = Date.now() - new Date(activeEntry.clock_in).getTime();
+      const m = String(Math.floor(diff / 60000)).padStart(2, "0");
+      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+      setElapsed(`${m}:${s}`);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeEntry]);
+
+  /* -------------------------------------------------------------------------- */
+  /* AUTO LOGOUT */
+  /* -------------------------------------------------------------------------- */
+
+  function startAutoLogout() {
+    if (logoutTimer.current) clearTimeout(logoutTimer.current);
+    logoutTimer.current = setTimeout(reset, 10000);
+  }
+
+  function reset() {
     setEmployee(null);
     setActiveEntry(null);
     setPin("");
-    setError("");
+    setError(null);
+    setElapsed("00:00");
   }
 
   /* -------------------------------------------------------------------------- */
-  /*                          LOGIN WITH PIN                                    */
+  /* PIN VERIFY */
   /* -------------------------------------------------------------------------- */
 
-  async function handlePinSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
+  useEffect(() => {
+    if (pin.length === 4 && property) verifyPin();
+  }, [pin, property]);
+
+  // Realtime: listen for entries for this employee and update activeEntry
+  useEffect(() => {
+    if (!employee) return;
+
+    const channel = supabase
+      .channel(`employee_time_${employee.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "time_entries", filter: `employee_id=eq.${employee.id}` },
+        (payload) => {
+          const ev = payload.eventType;
+          const newRow = payload.new as any;
+          const oldRow = payload.old as any;
+
+          // If there's an active row (clock_out is null), set it; otherwise clear
+          if (newRow && newRow.clock_out == null) {
+            setActiveEntry({ id: newRow.id, clock_in: newRow.clock_in });
+            startAutoLogout();
+          } else if (ev === "UPDATE" && newRow && newRow.clock_out != null) {
+            // someone clocked out
+            setActiveEntry(null);
+            reset();
+          } else if (ev === "DELETE" && oldRow) {
+            setActiveEntry(null);
+            reset();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try {
+        supabase.removeChannel(channel);
+      } catch {}
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee]);
+
+  async function verifyPin() {
+    if (!property) return;
 
     const { data: emp } = await supabase
       .from("employees")
-      .select("id, name, pin, property_id, properties(name)")
+      .select("id, name, pin, property_id, is_active")
       .eq("pin", pin)
+      .eq("property_id", property.id)
       .maybeSingle();
 
-    if (!emp) {
-      setError("Invalid PIN");
-      return;
-    }
+    if (!emp) return triggerError("Invalid PIN");
+    if (!emp.is_active) return triggerError("Employee inactive");
 
-    const fixedEmp: Employee = {
-      ...emp,
-      properties: Array.isArray((emp as any).properties)
-        ? (emp as any).properties[0] || null
-        : emp.properties,
-    };
-
-    setEmployee(fixedEmp);
+    setEmployee(emp);
 
     const { data: active } = await supabase
       .from("time_entries")
-      .select("*")
+      .select("id, clock_in")
       .eq("employee_id", emp.id)
       .is("clock_out", null)
       .maybeSingle();
 
     setActiveEntry(active || null);
+    startAutoLogout();
+  }
+
+  function triggerError(msg: string) {
+    setError(msg);
+    setShake(true);
+    setPin("");
+    setTimeout(() => setShake(false), 350);
   }
 
   /* -------------------------------------------------------------------------- */
-  /*                               ACTIONS                                      */
+  /* CLOCK ACTIONS */
   /* -------------------------------------------------------------------------- */
 
-  async function handleClockIn() {
-    if (!employee) return;
+  async function clockIn() {
+    if (!employee || !property) return;
 
     await supabase.from("time_entries").insert({
       employee_id: employee.id,
-      property_id: employee.property_id,
+      property_id: property.id,
       clock_in: new Date().toISOString(),
     });
 
-    const { data: active } = await supabase
+    const { data } = await supabase
       .from("time_entries")
-      .select("*")
+      .select("id, clock_in")
       .eq("employee_id", employee.id)
       .is("clock_out", null)
       .maybeSingle();
 
-    setActiveEntry(active || null);
-
-    /* 🚀 Reset auto logout countdown after clock in */
-    restartAutoLogoutTimer();
+    setActiveEntry(data || null);
+    startAutoLogout();
   }
 
-  async function handleClockOut() {
+  async function clockOut() {
     if (!activeEntry) return;
 
     await supabase
@@ -152,144 +229,118 @@ export default function ClockPage() {
       .update({ clock_out: new Date().toISOString() })
       .eq("id", activeEntry.id);
 
-    setActiveEntry(null);
-
-    /* 🚀 Restart auto logout countdown after clock out */
-    restartAutoLogoutTimer();
+    reset();
   }
 
   /* -------------------------------------------------------------------------- */
-  /*                🚀 Restart the 10-sec Auto Logout Timer                     */
-  /* -------------------------------------------------------------------------- */
-
-  function restartAutoLogoutTimer() {
-    if (autoLogoutTimer) clearTimeout(autoLogoutTimer);
-
-    const timer = setTimeout(() => resetToPinScreen(), 10000);
-    setAutoLogoutTimer(timer as unknown as number);
-  }
-
-  /* -------------------------------------------------------------------------- */
-  /*                       1-MINUTE MINIMUM CLOCK OUT RULE                      */
-  /* -------------------------------------------------------------------------- */
-
-  function canClockOut() {
-    if (!activeEntry) return false;
-    const start = new Date(activeEntry.clock_in).getTime();
-    return now - start >= 60000; // 60 seconds
-  }
-
-  /* -------------------------------------------------------------------------- */
-  /*                          TIMER DISPLAY                                     */
-  /* -------------------------------------------------------------------------- */
-
-  function renderElapsed() {
-    if (!activeEntry) return "";
-
-    const start = new Date(activeEntry.clock_in).getTime();
-    const diff = now - start;
-
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-
-    return `${h}h ${m}m ${s}s`;
-  }
-
-  /* -------------------------------------------------------------------------- */
-  /*                               UI RENDERING                                 */
+  /* UI */
   /* -------------------------------------------------------------------------- */
 
   return (
-    <div className="space-y-6 max-w-md mx-auto mt-10">
+    <div className="h-dvh w-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 px-4 overflow-hidden">
+      <div
+        className={`w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-xl mx-auto
+          ${shake ? "animate-shake" : ""}
+          ${activeEntry ? "animate-pulse-glow" : ""}
+        `}
+      >
+        {/* REAL TIME CLOCK */}
+            <div className="flex items-center justify-center gap-3 text-5xl font-mono tracking-tight mb-6 text-slate-900">
+              <Clock className="h-7 w-7 text-slate-500" />
+              <div className="leading-none">{now.toLocaleTimeString()}</div>
+            </div>
 
-      <h1 className="text-2xl font-semibold text-center">Employee Clock Portal</h1>
+        {!employee ? (
+          <>
+            <h2 className="text-lg mb-5 text-slate-600">
+              {property?.name || "Loading..."}
+            </h2>
 
-      {/* ------------------------- PIN LOGIN SCREEN ------------------------- */}
-      {!employee && (
-        <Card className="p-6 shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle className="text-center text-xl">Enter PIN</CardTitle>
-          </CardHeader>
+            <input
+              autoFocus
+              type="password"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+              className="w-full text-center text-3xl tracking-[0.6em] py-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm"
+              placeholder="••••"
+            />
 
-          <CardContent>
-            <form onSubmit={handlePinSubmit} className="space-y-4">
-              <input
-                className="border p-4 rounded-lg w-full text-lg text-center tracking-widest"
-                type="password"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                placeholder="••••"
-              />
-
-              {error && <p className="text-red-600 text-center">{error}</p>}
-
-              <Button className="w-full py-4 text-lg rounded-xl" type="submit">
-                Continue
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* -------------------- EMPLOYEE CLOCK IN/OUT SCREEN ------------------ */}
-      {employee && (
-        <Card className="p-6 shadow-xl rounded-xl">
-          <CardHeader>
-            <CardTitle className="text-xl text-center">Welcome, {employee.name}</CardTitle>
-          </CardHeader>
-
-          <CardContent className="space-y-6">
-
-            <div className="flex justify-center items-center gap-2 text-slate-600">
-              <Building2 size={18} />
-              <span>{employee.properties?.name || "Unknown property"}</span>
+            {error && (
+              <div className="flex items-center justify-center gap-2 text-red-600 mt-4 text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                {error}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* EMPLOYEE INFO */}
+            <div className="flex flex-col items-center gap-1 mb-4">
+              <User className="h-6 w-6 text-emerald-600" />
+              <h2 className="text-xl font-semibold text-slate-900">
+                {employee.name}
+              </h2>
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Building2 className="h-4 w-4" />
+                {property?.name}
+              </div>
             </div>
 
             {activeEntry ? (
-              <div className="text-blue-700 flex justify-center items-center gap-2 text-lg">
-                <Timer size={20} />
-                <span>Elapsed: {renderElapsed()}</span>
-              </div>
+              <>
+                {/* TIMER */}
+                <div className="flex flex-col items-center mb-5">
+                  <Timer className="h-6 w-6 text-blue-500 mb-1" />
+                  <div className="text-4xl font-mono tracking-widest text-blue-600">
+                    {elapsed}
+                  </div>
+                  <span className="mt-1 text-xs text-emerald-600 font-medium">
+                    CLOCKED IN
+                  </span>
+                </div>
+
+                <button
+                  onClick={clockOut}
+                  className="w-full py-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-lg font-semibold transition shadow-sm"
+                >
+                  Clock Out
+                </button>
+              </>
             ) : (
-              <div className="flex justify-center">
-                <Badge className="w-fit">Idle</Badge>
-              </div>
+              <button
+                onClick={clockIn}
+                className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-semibold transition shadow-sm"
+              >
+                Clock In
+              </button>
             )}
+          </>
+        )}
+      </div>
 
-            <div>
-              {!activeEntry ? (
-                <Button
-                  className="w-full py-4 text-lg rounded-xl flex gap-2"
-                  onClick={handleClockIn}
-                >
-                  <Clock size={20} />
-                  Clock In
-                </Button>
-              ) : (
-                <Button
-                  disabled={!canClockOut()}
-                  className={`w-full py-4 text-lg rounded-xl flex gap-2 ${
-                    canClockOut()
-                      ? "bg-red-500 hover:bg-red-600"
-                      : "bg-gray-400 cursor-not-allowed"
-                  }`}
-                  onClick={() => canClockOut() && handleClockOut()}
-                >
-                  <Clock size={20} />
-                  {canClockOut() ? "Clock Out" : "Wait 1 minute..."}
-                </Button>
-              )}
-            </div>
+      {/* ANIMATIONS */}
+      <style jsx>{`
+        @keyframes shake {
+          0% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          50% { transform: translateX(5px); }
+          75% { transform: translateX(-5px); }
+          100% { transform: translateX(0); }
+        }
+        .animate-shake {
+          animation: shake 0.35s;
+        }
 
-            {/* 🚀 AUTO-LOGOUT COUNTDOWN MESSAGE */}
-            <p className="text-center text-sm text-slate-500">
-              You will be logged out automatically in 10 seconds.
-            </p>
-
-          </CardContent>
-        </Card>
-      )}
+        @keyframes glow {
+          0% { box-shadow: 0 0 0 rgba(16,185,129,0.3); }
+          50% { box-shadow: 0 0 25px rgba(16,185,129,0.7); }
+          100% { box-shadow: 0 0 0 rgba(16,185,129,0.3); }
+        }
+        .animate-pulse-glow {
+          animation: glow 2s infinite;
+        }
+      `}</style>
     </div>
   );
 }
