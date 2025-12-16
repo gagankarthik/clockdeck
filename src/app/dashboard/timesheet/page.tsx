@@ -16,7 +16,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
-  Pencil, Save, X, Download, ChevronLeft, ChevronRight
+  Pencil, Save, X, Download, ChevronLeft, ChevronRight, Trash2
 } from "lucide-react";
 
 /* ================= HELPERS ================= */
@@ -86,9 +86,7 @@ export default function TimesheetPage() {
     setEntries(data ?? []);
   }
 
-  useEffect(() => {
-    load();
-  }, [from, to]);
+  useEffect(() => { load(); }, [from, to]);
 
   /* ============ FILTERING ============ */
 
@@ -105,27 +103,33 @@ export default function TimesheetPage() {
 
   const todayEntries = filtered.filter(e => e.clock_in.startsWith(todayKey));
 
-  /* ============ WEEK GRID ============ */
+  /* ============ WEEK GRID (MULTI-SHIFT) ============ */
 
   const grid = useMemo(() => {
     const map: any = {};
+
     filtered.forEach(e => {
       const empId = e.employee.id;
-      const d = e.clock_in.slice(0, 10);
+      const day = e.clock_in.slice(0, 10);
+
       map[empId] ??= {
         name: e.employee.name,
         role: e.employee.role,
         days: {},
-        total: 0
+        total: 0,
       };
+
+      map[empId].days[day] ??= [];
+
       const hrs = hoursBetween(e.clock_in, e.clock_out);
-      map[empId].days[d] = { ...e, hrs };
+      map[empId].days[day].push({ ...e, hrs });
       map[empId].total += hrs;
     });
+
     return Object.values(map);
   }, [filtered]);
 
-  /* ============ EDIT ============ */
+  /* ============ EDIT / DELETE ============ */
 
   const startEdit = (e: any) => {
     setEditing(e);
@@ -143,23 +147,10 @@ export default function TimesheetPage() {
     load();
   };
 
-  /* ============ EXPORT ============ */
-
-  const exportPDF = (rows: any[]) => {
-    const doc = new jsPDF("landscape");
-    autoTable(doc, {
-      head: [["Employee","Role","Property","Date","In","Out","Hours"]],
-      body: rows.map(e => [
-        e.employee.name,
-        e.employee.role ?? "",
-        e.property.name,
-        e.clock_in.slice(0,10),
-        fmt(e.clock_in),
-        fmt(e.clock_out),
-        hoursBetween(e.clock_in,e.clock_out).toFixed(2)
-      ])
-    });
-    doc.save("timesheet.pdf");
+  const deleteEntry = async (id: string) => {
+    if (!confirm("Delete this time entry?")) return;
+    await supabase.from("time_entries").delete().eq("id", id);
+    load();
   };
 
   /* ================= UI ================= */
@@ -168,7 +159,7 @@ export default function TimesheetPage() {
     <div className="max-w-7xl mx-auto px-4 space-y-6">
       <h1 className="text-3xl font-semibold">Timesheets</h1>
 
-      {/* FILTERS – 2 ROWS */}
+      {/* FILTERS */}
       <Card>
         <CardContent className="pt-6 space-y-4">
           <div className="grid md:grid-cols-4 gap-4">
@@ -196,41 +187,31 @@ export default function TimesheetPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 items-center">
-            <Button
-              variant="outline"
-              onClick={() => {
-                const d = new Date(weekBase);
-                d.setDate(d.getDate() - 7);
-                setWeekBase(d);
-                setFrom(weekDates(d)[0]);
-                setTo(weekDates(d)[6]);
-              }}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" /> Prev Week
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => {
+              const d = new Date(weekBase);
+              d.setDate(d.getDate() - 7);
+              setWeekBase(d);
+              setFrom(weekDates(d)[0]);
+              setTo(weekDates(d)[6]);
+            }}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Prev
             </Button>
 
-            <Button
-              variant="outline"
-              onClick={() => {
-                const d = new Date(weekBase);
-                d.setDate(d.getDate() + 7);
-                setWeekBase(d);
-                setFrom(weekDates(d)[0]);
-                setTo(weekDates(d)[6]);
-              }}
-            >
-              Next Week <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-
-            <Button variant="outline" onClick={() => exportPDF(filtered)}>
-              <Download className="h-4 w-4 mr-2" /> PDF
+            <Button variant="outline" onClick={() => {
+              const d = new Date(weekBase);
+              d.setDate(d.getDate() + 7);
+              setWeekBase(d);
+              setFrom(weekDates(d)[0]);
+              setTo(weekDates(d)[6]);
+            }}>
+              Next <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* TODAY TABLE */}
+      {/* TODAY */}
       <Card>
         <CardHeader><CardTitle>Today</CardTitle></CardHeader>
         <CardContent>
@@ -242,23 +223,22 @@ export default function TimesheetPage() {
                 <TableHead>Property</TableHead>
                 <TableHead>In</TableHead>
                 <TableHead>Out</TableHead>
-                <TableHead className="text-right">Hours</TableHead>
+                <TableHead>Hours</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {todayEntries.map(e=>(
+              {todayEntries.map(e => (
                 <TableRow key={e.id}>
-                  <TableCell className="font-medium">{e.employee.name}</TableCell>
+                  <TableCell>{e.employee.name}</TableCell>
                   <TableCell>{e.employee.role ?? "—"}</TableCell>
                   <TableCell>{e.property.name}</TableCell>
                   <TableCell>{fmt(e.clock_in)}</TableCell>
                   <TableCell>{fmt(e.clock_out)}</TableCell>
-                  <TableCell className="text-right">{hoursBetween(e.clock_in,e.clock_out).toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Button size="sm" variant="ghost" onClick={()=>startEdit(e)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                  <TableCell>{hoursBetween(e.clock_in,e.clock_out).toFixed(2)}</TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={()=>startEdit(e)}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="ghost" onClick={()=>deleteEntry(e.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -271,12 +251,12 @@ export default function TimesheetPage() {
       <Card>
         <CardHeader><CardTitle>Weekly Overview</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
-          <Table className="min-w-[1100px]">
+          <Table className="min-w-[1200px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
                 {dates.map(d => <TableHead key={d} className="text-center">{d}</TableHead>)}
-                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -286,21 +266,25 @@ export default function TimesheetPage() {
                     <div className="font-medium">{g.name}</div>
                     <div className="text-xs text-muted-foreground">{g.role ?? "—"}</div>
                   </TableCell>
-                  {dates.map(d=>{
-                    const c=g.days[d];
-                    return (
-                      <TableCell key={d} className="text-center">
-                        {c ? <>
+
+                  {dates.map(d => (
+                    <TableCell key={d} className="align-top space-y-2">
+                      {(g.days[d] ?? []).map((c:any) => (
+                        <div key={c.id} className="border rounded-md p-2 text-xs">
                           <div>{fmt(c.clock_in)}–{fmt(c.clock_out)}</div>
-                          <div className="text-xs">{c.hrs.toFixed(2)}h</div>
-                          <Button size="sm" variant="ghost" onClick={()=>startEdit(c)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </> : "—"}
-                      </TableCell>
-                    );
-                  })}
-                  <TableCell className="text-right font-semibold">{g.total.toFixed(2)}</TableCell>
+                          <div className="flex justify-between items-center">
+                            <span>{c.hrs.toFixed(2)}h</span>
+                            <div className="flex gap-1">
+                              <Button size="sm" variant="ghost" onClick={()=>startEdit(c)}><Pencil className="h-3 w-3" /></Button>
+                              <Button size="sm" variant="ghost" onClick={()=>deleteEntry(c.id)}><Trash2 className="h-3 w-3 text-red-500" /></Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </TableCell>
+                  ))}
+
+                  <TableCell className="font-semibold">{g.total.toFixed(2)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
