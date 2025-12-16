@@ -15,17 +15,6 @@ CREATE TABLE public.employees (
   CONSTRAINT employees_property_id_fkey FOREIGN KEY (property_id) REFERENCES public.properties(id),
   CONSTRAINT employees_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
 );
-CREATE TABLE public.pay_periods (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  start_date date NOT NULL,
-  end_date date NOT NULL,
-  period_type text NOT NULL CHECK (period_type = ANY (ARRAY['weekly'::text, 'biweekly'::text])),
-  created_by uuid NOT NULL,
-  is_locked boolean DEFAULT false,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT pay_periods_pkey PRIMARY KEY (id),
-  CONSTRAINT pay_periods_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
-);
 CREATE TABLE public.profiles (
   id uuid NOT NULL,
   email text,
@@ -49,19 +38,10 @@ CREATE TABLE public.time_entries (
   property_id uuid NOT NULL,
   clock_in timestamp with time zone NOT NULL,
   clock_out timestamp with time zone,
-  notes text,
   created_by uuid,
   created_at timestamp with time zone DEFAULT now(),
-  status text NOT NULL DEFAULT 'pending'::text,
-  approved_by uuid,
-  approved_at timestamp with time zone,
-  rejection_reason text,
-  regular_hours numeric DEFAULT 0,
-  overtime_hours numeric DEFAULT 0,
-  pay_period_id uuid,
   CONSTRAINT time_entries_pkey PRIMARY KEY (id),
   CONSTRAINT time_entries_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id),
   CONSTRAINT time_entries_property_id_fkey FOREIGN KEY (property_id) REFERENCES public.properties(id),
-  CONSTRAINT time_entries_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id),
-  CONSTRAINT time_entries_pay_period_fkey FOREIGN KEY (pay_period_id) REFERENCES public.pay_periods(id)
+  CONSTRAINT time_entries_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
 );
